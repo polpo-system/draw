@@ -330,9 +330,12 @@ MODULE Graphics;  (** portable *)   (*NW 21.12.89 / 3.2.92 / JG 14.6.94 ported t
       ELSIF C.class[cno] # NIL THEN
         C.class[cno]; ReadObj(R, new);
         new.selected := FALSE; new.marked := FALSE; (* new.next := obj; obj := new; *)
-        IF last = NIL THEN obj := new ELSE last.next := new END;
-        last := new;
-        new.do.read(new, R, C)
+        new.do.read(new, R, C);
+        (* polpo: a macro of a library that is missing is left out (it trapped) *)
+        IF ~(new IS Macro) OR (new(Macro).mac # NIL) THEN
+          IF last = NIL THEN obj := new ELSE last.next := new END;
+          last := new
+        END
       ELSE Files.Set(R, Files.Base(R), Files.Pos(R) + 10);
         Files.ReadInt(R, len); Files.Set(R, Files.Base(R), Files.Pos(R) + len)
       END ;
@@ -421,7 +424,8 @@ MODULE Graphics;  (** portable *)   (*NW 21.12.89 / 3.2.92 / JG 14.6.94 ported t
 
   PROCEDURE ThisMac*(L: Library; VAR Mname: ARRAY OF CHAR): MacHead;
     VAR mh: MacHead;
-  BEGIN mh := L.first;
+  BEGIN mh := NIL;
+    IF L # NIL THEN mh := L.first END ;
     WHILE (mh # NIL) & (mh.name # Mname) DO mh := mh.next END ;
     RETURN mh
   END ThisMac;
@@ -616,7 +620,8 @@ MODULE Graphics;  (** portable *)   (*NW 21.12.89 / 3.2.92 / JG 14.6.94 ported t
   PROCEDURE ReadMacro(obj: Object; VAR R: Files.Rider; VAR C: Context);
     VAR lno: SHORTINT; name: ARRAY 32 OF CHAR;
   BEGIN Files.Read(R, lno);
-    Files.ReadString(R, name); obj(Macro).mac := ThisMac(C.lib[lno], name)
+    Files.ReadString(R, name); obj(Macro).mac := ThisMac(C.lib[lno], name);
+    IF obj(Macro).mac = NIL THEN WMsg(name, " macro missing, left out") END
   END ReadMacro;
 
   PROCEDURE WriteMacro(obj: Object; cno: SHORTINT; VAR W1: Files.Rider; VAR C: Context);
